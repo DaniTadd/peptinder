@@ -7,36 +7,33 @@ from dotenv import load_dotenv
 import warnings
 
 # ==============================================================================
-# 0. 🔑 INICIALIZACIÓN, PERSISTENCIA Y CONFIGURACIÓN
+# 0. 🔑 INICIALIZACIÓN Y CARGA INTELIGENTE DE API KEY ( Secrets > .env )
 # ==============================================================================
-# Carga de entorno robusta
-load_dotenv()
-api_key = os.getenv("GOOGLE_API_KEY")
+# Primero intentamos cargar la API Key de la Bóveda de Secretos de Streamlit Cloud
+try:
+    # Si la app corre en Streamlit Cloud, st.secrets estará definido
+    api_key = st.secrets["GOOGLE_API_KEY"]
+except (FileNotFoundError, KeyError, NameError):
+    # Si st.secrets no existe (estamos corriendo localmente), cargamos desde .env
+    load_dotenv()
+    api_key = os.getenv("GOOGLE_API_KEY")
 
-if not api_key or api_key == "":
-    if os.path.exists(".env"):
-        with open(".env", "r") as f:
-            for line in f:
-                if "GOOGLE_API_KEY" in line and "=" in line:
-                    api_key = line.split("=")[1].strip().replace('"', '').replace("'", "")
-                    break
+# Inicialización del cliente de IA (si la llave se cargó)
+if api_key and api_key.strip() != "":
+    client = genai.Client(api_key=api_key)
+else:
+    client = None
 
-client = genai.Client(api_key=api_key) if api_key else None
-
-# Persistencia de la IA y selección
+# Manejo de Estado para persistencia de la IA
 if 'ai_report' not in st.session_state:
     st.session_state.ai_report = None
+# Persistencia del ID seleccionado para que no se borre la IA al cambiar selección
 if 'selected_peptide_id' not in st.session_state:
     st.session_state.selected_peptide_id = None
 
-# Higiene de la App y forzado de modo claro inicial
+# Higiene e ID de la app
 warnings.filterwarnings("ignore", category=FutureWarning)
-st.set_page_config(
-    page_title="Peptinder", 
-    layout="wide", 
-    page_icon="🧪",
-    initial_sidebar_state="collapsed",
-)
+st.set_page_config(page_title="Antimicrobial Tinder", layout="wide", page_icon="🧪")
 
 # ==============================================================================
 # 🌟 1. BANNER SUPERIOR DE EQUIPO (Branding Incorporado y Centrado Vertical Solucionado)
@@ -54,143 +51,95 @@ MIEMBROS_EQUIPO = [
 # Construimos los botones en una sola línea continua (sin saltos de línea \n) para evitar fantasmas HTML
 botones_links_html = "".join([f'<a href="{m["url"]}" target="_blank" class="linkedin-link">💼 {m["nombre"]}</a>' for m in MIEMBROS_EQUIPO])
 
-st.markdown(f"""
+# 1. 🎨 CSS EMERALD LIGHT TOTAL (ANTI-MODO OSCURO FORZADO)
+# (Matamos los oscuros de la tabla y el gráfico aquí de forma definitiva)
+st.markdown("""
 <style>
-    /* BANNER SUPERIOR EMERALD */
-    .emerald-banner {{
-        width: 100%;
-        padding: 55px 0 25px 0; /* <--- Más espacio adentro (arriba) para que baje el texto */
-        margin-bottom: 25px;
-        margin-top: -4rem; /* <--- Menos agresivo para no salirse de la pantalla */
-        
-        /* Imagen de fondo suave translúcida (90% opacidad menta) */
-        background-image: 
-            linear-gradient(rgba(240, 253, 244, 0.65), rgba(240, 253, 244, 0.65)), 
-            url('{IMG_FONDO_PLANTACION}');
-        background-size: cover;
-        background-position: center;
-        border-bottom: 2px solid #A7F3D0;
-        border-radius: 0 0 15px 15px;
-        
-        /* Flexbox COLUMN para centrar verticalmente todo el bloque de contenido */
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.03);
-    }}
+    /* 1. Fondo General de la App y Cabecera (Verde Menta Suave, forzado) */
+    /* Aseguramos que la app ignore el tema oscuro predeterminado */
+    html, body, .stApp {
+        background-color: #F0FDF4 !important; /* Fondo claro menta */
+    }
 
-    /* Título principal de Branding (Grande, Esmeralda) - Cumple requisito */
-    .banner-title {{
-        color: #166534 !important;
-        font-size: 2.2rem !important; /* <--- Muy grande y destacado */
-        font-weight: 800;
-        margin: 0 !important;
-        letter-spacing: -1px;
-    }}
-
-    /* Etiqueta 'Desarrollado por' (Gris neutro) */
-    .banner-label {{
-        color: #64748b !important;
-        font-size: 0.85rem !important;
-        font-weight: 500;
-        margin: 0 !important;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }}
-
-    /* Contenedor de links */
-    .linkedin-container {{
-        display: flex; gap: 15px; flex-wrap: wrap; justify-content: center;
-    }}
-
-    /* Botones de LinkedIn Emerald Lab */
-    .linkedin-link {{
-        background-color: #16A34A !important;
-        color: white !important;
-        text-decoration: none !important;
-        padding: 8px 18px !important;
-        border-radius: 25px !important;
-        font-size: 0.9rem !important;
-        font-weight: 600 !important;
-        box-shadow: 0 4px 6px -1px rgba(22,163,74,0.3);
-        transition: all 0.2s ease;
-    }}
-    .linkedin-link:hover {{
-        background-color: #15803d !important;
-        box-shadow: 0 8px 15px -3px rgba(22, 163, 74, 0.3);
-        transform: translateY(-2px);
-    }}
-
-    /* ESTILOS GLOBALES EMERALD (Matando el modo oscuro forzado) */
-    html, body, .stApp {{ background-color: #F0FDF4 !important; }}
-    html, body, [class*="st-"] {{ color: #052E16 !important; font-family: 'Inter', sans-serif; }}
-    h1, h2, h3 {{ color: #166534 !important; font-weight: 700 !important; letter-spacing: -1px; }}
-    
-    label p {{ color: #0F5132 !important; font-weight: 600 !important; font-size: 1.15rem !important; }}
-
-    div[data-baseweb="select"] div[role="button"],
-    .stSelectbox div[data-baseweb="select"],
-    .stTextInput>div>div>input {{
-        background-color: white !important;
+    /* 2. Forzar color de TODA la fuente a Verde Bosque Muy Oscuro (Legibilidad Máxima) */
+    html, body, [class*="st-"] {
         color: #052E16 !important;
+        font-family: 'Inter', -apple-system, sans-serif;
+    }
+
+    /* 3. Títulos destacados en Esmeralda */
+    h1, h2, h3 {
+        color: #166534 !important;
+        font-weight: 700 !important;
+        letter-spacing: -1px;
+    }
+
+    /* 4. Labels de inputs (Selectbox, TextInput) */
+    label p {
+        color: #0F5132 !important;
+        font-weight: 600 !important;
+        font-size: 1.1rem !important;
+    }
+
+    /* Estilo para los inputs limpios con borde */
+    div[data-baseweb="select"] div[role="button"] {
+        background-color: white !important;
         border-radius: 8px !important;
         border: 1px solid #A7F3D0 !important;
-    }}
+    }
 
-    /* Fix para el menú desplegable del autocompletar */
-    div[data-testid="stVirtualDropdown"] div[role="listbox"] {{ background-color: white !important; }}
-    div[data-testid="stVirtualDropdown"] li {{ color: #052E16 !important; background-color: white !important; }}
-    div[data-testid="stVirtualDropdown"] li:hover {{ background-color: #D1FAE5 !important; }}
-
-    /* Tabla */
-    div[data-testid="stDataFrame"] {{
-        background-color: white !important;
+    /* 5. Estilo de la Tabla (DataFrame) - (Mata el negro definitivamente) */
+    div[data-testid="stDataFrame"] {
+        background-color: white;
         border-radius: 12px;
         padding: 10px;
         border: 1px solid #A7F3D0;
-    }}
-    [data-testid="stDataFrame"] div[role="row"],
-    [data-testid="stDataFrame"] div[role="cell"],
-    [data-testid="stDataFrame"] div[role="columnheader"] {{ color: #052E16 !important; }}
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+    }
 
-    /* Botones de acción */
-    .stButton>button {{
-        background-color: #22C55E !important;
+    /* 6. Botones (General y de la IA) */
+    .stButton>button {
+        background-color: #22C55E !important; /* Verde Esmeralda Brillante */
         color: white !important;
         border-radius: 8px !important;
         padding: 0.6rem 2rem !important;
         font-weight: 600 !important;
         border: none !important;
         transition: all 0.2s ease;
-    }}
-    .stButton>button:hover {{ background-color: #16A34A !important; }}
+    }
+    .stButton>button:hover {
+        background-color: #16A34A !important;
+        box-shadow: 0 10px 15px -3px rgba(34, 197, 94, 0.3);
+    }
 
-    /* Cajas de IA y Valores Raw (Fuentes Grandes) */
-    .stInfo {{
+    /* 7. Caja de Informe de IA */
+    .stInfo {
         background-color: #FFFFFF !important;
         color: #052E16 !important;
         border-left: 5px solid #22C55E !important;
         border-radius: 8px;
-    }}
-    .stCodeBlock, [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {{
-        background-color: #D1FAE5 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+    }
+    .stInfo p { color: #052E16 !important; }
+
+    /* 8. Cajas de Código y Números Raw (Corregido image_3.png y Agrandado) */
+    .stCodeBlock, [data-testid="stCodeBlock"] pre, [data-testid="stCodeBlock"] code {
+        background-color: #D1FAE5 !important; /* Fondo verde esmeralda translúcido */
         color: #052E16 !important;
+        border: 1px solid #A7F3D0 !important;
         border-radius: 8px;
-    }}
-    p code {{
+    }
+
+    /* Agrandamos la fuente de los valores raw a la derecha */
+    p code {
         background-color: #D1FAE5 !important;
         color: #166534 !important;
         padding: 4px 12px !important;
         border-radius: 6px !important;
         font-weight: 800 !important;
-        font-size: 1.25rem !important; /* Letra bien grande */
-        margin: 0 2px;
-    }}
+        font-size: 1.2rem !important; /* Letra bien grande y legible */
+    }
 </style>
-
-<div class="emerald-banner"><h1 class="banner-title">{BRANDING_NAME}</h1><p class="banner-label">{DESARROLLADO_POR_LABEL}</p><div class="linkedin-container">{botones_links_html}</div></div>
 """, unsafe_allow_html=True)
 
 
