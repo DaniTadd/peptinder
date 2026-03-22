@@ -1,7 +1,7 @@
 # 🧬 TEAM PEPTINDER
 **Plataforma Inteligente de Selección de Péptidos Fúngicos**
 
-🏆 **[¡Prueba la aplicación en vivo aquí!](https://peptinder-tu-usuario.streamlit.app)** *(Reemplazar con su link de Streamlit)*
+🏆 **[¡Prueba la aplicación en vivo aquí!](https://peptinder.streamlit.app/)**
 
 Peptinder es una herramienta bioinformática y estratégica diseñada para acelerar el descubrimiento de péptidos antimicrobianos (AMPs) contra hongos fitopatógenos. Combina el análisis de propiedades fisicoquímicas con Inteligencia Artificial generativa para ayudar a investigadores a seleccionar los mejores candidatos a fungicidas.
 
