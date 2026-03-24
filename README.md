@@ -32,3 +32,11 @@ Si deseas auditar el código y correr la app en tu entorno local:
 2. Instala las dependencias: `pip install -r requirements.txt`
 3. Crea un archivo `.env` en la raíz y añade tu API Key de Gemini: `GOOGLE_API_KEY="tu_clave_aqui"`
 4. Ejecuta la app: `streamlit run app.py`
+
+## 🛠️ Notas Técnicas y Despliegue
+
+Este repositorio contiene la versión optimizada de **Peptinder** para su ejecución fluida. 
+
+- **Gestión de Datos:** Debido al volumen de las bases de datos fisicoquímicas integradas (~51MB), se optó por una estructura de archivos que prioriza la velocidad de carga en el despliegue de la aplicación.
+- **Colaboración:** Proyecto desarrollado en 48hs junto a Bruno Bassi [(Link al repo original)](https://github.com/brunobassi02/antimicrobial-tinder<a>).
+- **Estado del Proyecto:** Esta es una versión funcional (MVP) de Hackathon. La lógica de scoring está centralizada en `/db-scoringlogic` para facilitar su auditoría y futura escalabilidad hacia entornos productivos.
